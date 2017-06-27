@@ -207,6 +207,10 @@ void ParticleFilter::resample() {
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
+  /* NOTE BOGDAN: one more way to implement this you can find it at
+  *  minute 15:09 from undacity video
+  *  https://youtu.be/-3HI3Iw3Z9g?t=15m5s */
+
   // Create a discrete distribution and a generator
   std::default_random_engine gen;
   std::discrete_distribution<int> distribution {weights.begin(), weights.end()};
