@@ -135,6 +135,71 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+  // For every particle
+  for (int particle_index = 0; particle_index < particles.size(); particle_index++)
+  {
+    // Current particle
+    Particle& cur_particle = particles[particle_index];
+
+    // Convert each observation in map's coordinate system
+    std::vector<LandmarkObs> observations_t;
+
+    // For each observation
+    for (const LandmarkObs& cur_obs : observations)
+    {
+      // Translate and rotate each landmark from vehicle coordinate system to map's coordinate system
+      LandmarkObs landmark_t;
+      landmark_t.id = cur_obs.id;
+      landmark_t.x = cur_obs.x * cos(cur_particle.theta) - cur_obs.y * sin(cur_particle.theta) + cur_particle.x;
+      landmark_t.y = cur_obs.x * sin(cur_particle.theta) + cur_obs.y * cos(cur_particle.theta) + cur_particle.y;
+      observations_t.push_back(landmark_t);
+    }
+
+    // Obtain predicted landmark list
+    std::vector<LandmarkObs> predicted;
+
+    // For each landmark
+    for (const Map::single_landmark_s& landmark : map_landmarks.landmark_list) {
+      // If landmark is within sensor range
+      if (dist(landmark.x_f, landmark.y_f, cur_particle.x, cur_particle.y) <= sensor_range) {
+        // Convert landmark to a predicted observation
+        LandmarkObs prediction {landmark.id_i, landmark.x_f, landmark.y_f};
+        predicted.push_back(prediction);
+      }
+    }
+
+    // Associate every observation with predicted landmark location
+    dataAssociation(predicted, observations_t);
+
+    // Calculate the new weight
+    double new_weight_product = 1;
+
+    // For each observation
+    for (const LandmarkObs& cur_obs : observations_t)
+    {
+      // Assumption: index of landmark in a map is equal to id of landmark - 1
+      // Get current prediction
+      Map::single_landmark_s cur_pred = map_landmarks.landmark_list[cur_obs.id - 1];
+
+      // Differences in x and y between measurement and prediction
+      double dx = cur_obs.x - cur_pred.x_f;
+      double dy = cur_obs.y - cur_pred.y_f;
+
+      // Calculate the new weight
+      double new_weight = 1 / (M_PI * 2 * std_landmark[0] * std_landmark[1]) *
+        std::exp(-1 * (pow(dx, 2) / pow(std_landmark[0], 2) + pow(dy, 2) / pow(std_landmark[1], 2)));
+
+      // Multiply running product of weights by the new weight
+      new_weight_product *= new_weight;
+    }
+
+    // Assign the new weight to the particle
+    cur_particle.weight = new_weight_product;
+
+    // Assign weight to the list of weights
+    weights[particle_index] = new_weight_product;
+  }
 }
 
 void ParticleFilter::resample() {
