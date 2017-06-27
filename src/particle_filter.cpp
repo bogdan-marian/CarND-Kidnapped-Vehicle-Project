@@ -207,6 +207,27 @@ void ParticleFilter::resample() {
 	// NOTE: You may find std::discrete_distribution helpful here.
 	//   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
 
+  // Create a discrete distribution and a generator
+  std::default_random_engine gen;
+  std::discrete_distribution<int> distribution {weights.begin(), weights.end()};
+
+  // Create vector for new particles
+  std::vector<Particle> new_particles;
+
+  // Draw new particles based on distribution
+  for (int i = 0; i < num_particles; i++) {
+    // Generate particle index using the distribution
+    int cur_particle_i = distribution(gen);
+
+    // Get a particle from the list of particles
+    Particle cur_particle = particles[cur_particle_i];
+
+    // Push back particle to the list of new particles
+    new_particles.push_back(cur_particle);
+  }
+
+  // Make new particles current particles
+  particles = new_particles;
 }
 
 Particle ParticleFilter::SetAssociations(Particle particle, std::vector<int> associations, std::vector<double> sense_x, std::vector<double> sense_y)
